@@ -89,7 +89,7 @@ func DefaultConfig() *OlmConfig {
 		PingInterval:     "3s",
 		PingTimeout:      "5s",
 		DisableHolepunch: false,
-		OverrideDNS:      false,
+		OverrideDNS:      true,
 		TunnelDNS:        false,
 		// DoNotCreateNewClient: false,
 		sources: make(map[string]string),
