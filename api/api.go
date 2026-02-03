@@ -272,9 +272,6 @@ func (s *API) SetConnectionStatus(isConnected bool) {
 
 	if isConnected {
 		s.connectedAt = time.Now()
-	} else {
-		// Clear peer statuses when disconnected
-		s.peerStatuses = make(map[int]*PeerStatus)
 	}
 }
 
