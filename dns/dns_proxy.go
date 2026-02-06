@@ -380,7 +380,7 @@ func (p *DNSProxy) handleDNSQuery(udpConn *gonet.UDPConn, queryData []byte, clie
 
 	// Check if we have local records for this query
 	var response *dns.Msg
-	if question.Qtype == dns.TypeA || question.Qtype == dns.TypeAAAA {
+	if question.Qtype == dns.TypeA || question.Qtype == dns.TypeAAAA || question.Qtype == dns.TypePTR {
 		response = p.checkLocalRecords(msg, question)
 	}
 
@@ -410,6 +410,34 @@ func (p *DNSProxy) handleDNSQuery(udpConn *gonet.UDPConn, queryData []byte, clie
 
 // checkLocalRecords checks if we have local records for the query
 func (p *DNSProxy) checkLocalRecords(query *dns.Msg, question dns.Question) *dns.Msg {
+	// Handle PTR queries
+	if question.Qtype == dns.TypePTR {
+		if ptrDomain, ok := p.recordStore.GetPTRRecord(question.Name); ok {
+			logger.Debug("Found local PTR record for %s -> %s", question.Name, ptrDomain)
+
+			// Create response message
+			response := new(dns.Msg)
+			response.SetReply(query)
+			response.Authoritative = true
+
+			// Add PTR answer record
+			rr := &dns.PTR{
+				Hdr: dns.RR_Header{
+					Name:   question.Name,
+					Rrtype: dns.TypePTR,
+					Class:  dns.ClassINET,
+					Ttl:    300, // 5 minutes
+				},
+				Ptr: ptrDomain,
+			}
+			response.Answer = append(response.Answer, rr)
+
+			return response
+		}
+		return nil
+	}
+
+	// Handle A and AAAA queries
 	var recordType RecordType
 	if question.Qtype == dns.TypeA {
 		recordType = RecordTypeA
