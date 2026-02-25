@@ -388,6 +388,7 @@ func (c *Client) getToken() (string, []ExitNode, error) {
 	tokenData := map[string]interface{}{
 		"olmId":  c.config.ID,
 		"secret": c.config.Secret,
+		"userToken": c.config.UserToken,
 		"orgId":  c.config.OrgID,
 	}
 	jsonData, err := json.Marshal(tokenData)
