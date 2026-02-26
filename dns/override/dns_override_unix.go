@@ -98,3 +98,49 @@ func RestoreDNSOverride() error {
 	logger.Info("DNS configuration restored successfully")
 	return nil
 }
+
+// CleanupStaleState removes any stale DNS configuration left over from a previous
+// unclean shutdown (e.g., system crash, power loss while tunnel was active).
+// This function should be called early during startup, before any network operations,
+// to ensure DNS is working properly.
+//
+// It checks and cleans up stale state from all supported DNS managers:
+// - NetworkManager: removes /etc/NetworkManager/conf.d/olm-dns.conf
+// - resolvconf: removes entry for the "olm" interface
+// - File-based: restores /etc/resolv.conf from backup if it exists
+//
+// This is safe to call even if no stale state exists.
+func CleanupStaleState() error {
+	var errs []error
+
+	// Clean up NetworkManager stale config
+	if err := platform.CleanupStaleNetworkManagerDNS(); err != nil {
+		logger.Warn("Failed to cleanup stale NetworkManager DNS config: %v", err)
+		errs = append(errs, fmt.Errorf("NetworkManager cleanup: %w", err))
+	} else {
+		logger.Debug("NetworkManager DNS cleanup completed")
+	}
+
+	// Clean up resolvconf stale entries (use default interface name "olm")
+	if err := platform.CleanupStaleResolvconfDNS("olm"); err != nil {
+		logger.Warn("Failed to cleanup stale resolvconf DNS config: %v", err)
+		errs = append(errs, fmt.Errorf("resolvconf cleanup: %w", err))
+	} else {
+		logger.Debug("resolvconf DNS cleanup completed")
+	}
+
+	// Clean up file-based stale backup
+	if err := platform.CleanupStaleFileDNS(); err != nil {
+		logger.Warn("Failed to cleanup stale file-based DNS config: %v", err)
+		errs = append(errs, fmt.Errorf("file DNS cleanup: %w", err))
+	} else {
+		logger.Debug("File-based DNS cleanup completed")
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("some DNS cleanup operations failed: %v", errs)
+	}
+
+	logger.Info("Stale DNS state cleanup completed successfully")
+	return nil
+}

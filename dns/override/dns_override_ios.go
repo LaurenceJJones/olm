@@ -13,3 +13,8 @@ func SetupDNSOverride(interfaceName string, proxyIp netip.Addr) error {
 func RestoreDNSOverride() error {
 	return nil
 }
+
+// CleanupStaleState is a no-op on iOS as DNS configuration is handled by the system
+func CleanupStaleState() error {
+	return nil
+}
