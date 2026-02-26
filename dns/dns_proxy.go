@@ -449,6 +449,23 @@ func (p *DNSProxy) checkLocalRecords(query *dns.Msg, question dns.Question) *dns
 
 	ips := p.recordStore.GetRecords(question.Name, recordType)
 	if len(ips) == 0 {
+		// Return NODATA if domain exists for another record type (NXDOMAIN would return from upstream)
+		var otherType RecordType
+		if recordType == RecordTypeA {
+			otherType = RecordTypeAAAA
+		} else {
+			otherType = RecordTypeA
+		}
+
+		if p.recordStore.HasRecord(question.Name, otherType) {
+			logger.Debug("Domain %s exists but has no %v records, returning NODATA", question.Name, recordType)
+			response := new(dns.Msg)
+			response.SetReply(query)
+			response.Authoritative = true
+			// Empty answer section = NODATA response
+			return response
+		}
+
 		return nil
 	}
 
